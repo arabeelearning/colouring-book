@@ -335,10 +335,28 @@ export class ColouringBook extends LitElement {
 		this.collapseMenuMobile === true ? this.showCollapseMenuMobile() : '';
 
 		this.toolsRightOffset >= 0 ? this.offsetToolsToRight() : '';
+		this._onFirstUpdatedCustomEvent();
+	}
+
+	async _getAllPathHistoryByImage(images) {
+		let pathHistory = [];
+		if(images && images.length != 0) {
+			pathHistory = await images.map((image) => {
+				const lines = window.localStorage.getItem('davie:' + this.identity + image);
+				return lines ? JSON.parse(lines) : [];
+			});
+		}
+
+		return pathHistory;
+	}
+
+	async _onFirstUpdatedCustomEvent() {
 		if (this.flutterApp === true) {
+			let pathHistory = await this._getAllPathHistoryByImage(this.images);
 			this.dispatchEvent(new CustomEvent('on-first-updated', {
 				detail: {
-					images: this.images
+					images: this.images,
+					pathHistory: pathHistory
 				},
 				bubbles: true,
 				composed: true,
@@ -359,7 +377,7 @@ export class ColouringBook extends LitElement {
 	}
 
 	selectImage(sourceImg, index) {
-		
+
 		if (this.selectedImage !== sourceImg) {
 			this.selectedImage = sourceImg
 			this.img = this.shadowRoot.getElementById(`canvasImage`)
@@ -388,32 +406,10 @@ export class ColouringBook extends LitElement {
 		let touch = oe.touches.item(0);
 		e.clientX = touch.clientX;
 		e.clientY = touch.clientY;
-		
-		if (this.flutterApp === true) {
-			this.dispatchEvent(new CustomEvent('on-touch-start', {
-				detail: {
-					position: this.getCursorPosition(e)
-				},
-				bubbles: true,
-				composed: true,
-			}));
-		}
-
 		this.mouseDown(e)
 	}
 	touchEnd(oe) {
 		let e = oe.currentTarget;
-
-		if (this.flutterApp === true) {
-			this.dispatchEvent(new CustomEvent('on-touch-end', {
-				detail: {
-					position: this.getCursorPosition(e)
-				},
-				bubbles: true,
-				composed: true,
-			}));
-		}
-
 		this.mouseUp(e);
 	}
 	touchMove(oe) {
@@ -424,17 +420,6 @@ export class ColouringBook extends LitElement {
 		let touch = oe.touches[0];
 		e.clientX = touch.clientX;
 		e.clientY = touch.clientY;
-
-		if (this.flutterApp === true) {
-			this.dispatchEvent(new CustomEvent('on-touch-move', {
-				detail: {
-					position: this.getCursorPosition(e)
-				},
-				bubbles: true,
-				composed: true,
-			}));
-		}
-
 		this.mouseMove(e)
 	}
 	async print() {
@@ -525,7 +510,9 @@ export class ColouringBook extends LitElement {
 		let event = new CustomEvent('clear-paths', {
 			detail: {
 				image: this.selectedImage,
-			}
+			},
+			bubbles: true,
+			composed: true
 		});
 		this.dispatchEvent(event);
 	}
@@ -534,7 +521,9 @@ export class ColouringBook extends LitElement {
 		this.storeLocal()
 		this.refresh(this.ctx, this.img);
 		let event = new CustomEvent('remove-path', {
-			detail: { image: this.selectedImage }
+			detail: { image: this.selectedImage },
+			bubbles: true,
+			composed: true
 		});
 		this.dispatchEvent(event);
 		if (this.onThumbnails) { this.refresh(this.canvasThumbCtx, this.imageThumb, this.imageThumb.width / this.img.width) }
@@ -588,7 +577,9 @@ export class ColouringBook extends LitElement {
 				detail: {
 					image: this.selectedImage,
 					path
-				}
+				},
+				bubbles: true,
+				composed: true,
 			});
 			this.dispatchEvent(event);
 		}
